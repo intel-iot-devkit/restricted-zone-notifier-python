@@ -196,7 +196,7 @@ def main():
     # Initialise the class
     infer_network = Network()
     # Load the network to IE plugin to get shape of input layer
-    n, c, h, w = infer_network.load_model(model, device, 1, 1, 0, cpu_extension)
+    n, c, h, w = infer_network.load_model(model, device, 1, 1, 0, cpu_extension)[1]
 
     message_thread = Thread(target=message_runner, args=())
     message_thread.setDaemon(True)

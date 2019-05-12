@@ -74,8 +74,8 @@ def build_argparser():
                              "path to a shared library with the kernels impl.")
     parser.add_argument("-d", "--device", default="CPU", type=str,
                         help="Specify the target device to infer on; "
-                             "CPU, GPU, FPGA or MYRIAD is acceptable. Looks"
-                             " for a suitable plugin for device specified "
+                             "CPU, GPU, FPGA, HDDL or MYRIAD is acceptable. Application "
+                             "will look for a suitable plugin for device specified"
                              "(CPU by default)")
     parser.add_argument("-th", "--prob_threshold", default=0.5, type=float,
                         help="Probability threshold for detections filtering")
@@ -196,7 +196,7 @@ def main():
     # Initialise the class
     infer_network = Network()
     # Load the network to IE plugin to get shape of input layer
-    n, c, h, w = infer_network.load_model(args.model, args.device, 1, 1, 0, args.cpu_extension)
+    n, c, h, w = infer_network.load_model(args.model, args.device, 1, 1, 0, args.cpu_extension)[1]
 
     message_thread = Thread(target=message_runner, args=())
     message_thread.setDaemon(True)
