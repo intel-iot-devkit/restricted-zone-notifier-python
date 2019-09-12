@@ -51,6 +51,12 @@ MQTT_HOST = IPADDRESS
 MQTT_PORT = 1883
 MQTT_KEEPALIVE_INTERVAL = 60
 
+# Global variables
+TARGET_DEVICE = 'CPU'
+accepted_devices = ['CPU', 'GPU', 'MYRIAD', 'HETERO:FPGA,CPU', 'HDDL']
+is_async_mode = True
+CONFIG_FILE = '../resources/config.json'
+
 # Flag to control background thread
 KEEP_RUNNING = True
 
@@ -66,15 +72,13 @@ def build_argparser():
     parser = ArgumentParser()
     parser.add_argument("-m", "--model", required=True, type=str,
                         help="Path to an .xml file with a trained model.")
-    parser.add_argument("-i", "--input", required=True, type=str,
-                        help="Path to video file or image. "
-                             "'cam' for capturing video stream from camera", )
     parser.add_argument("-l", "--cpu_extension", type=str, default=None,
                         help="MKLDNN (CPU)-targeted custom layers. Absolute "
                              "path to a shared library with the kernels impl.")
     parser.add_argument("-d", "--device", default="CPU", type=str,
                         help="Specify the target device to infer on; "
-                             "CPU, GPU, FPGA, HDDL or MYRIAD is acceptable. Application "
+                             "CPU, GPU, FPGA, HDDL, MYRIAD is acceptable. To run with multiple devices use "
+                             "MULTI:<device1>,<device2>,etc. Application "
                              "will look for a suitable plugin for device specified"
                              "(CPU by default)")
     parser.add_argument("-th", "--prob_threshold", default=0.5, type=float,
@@ -92,7 +96,32 @@ def build_argparser():
     parser.add_argument('-r', '--rate', default=1, type=int,
                         help="Number of seconds between data updates "
                              "to MQTT server")
+    parser.add_argument("-f", "--flag", help="sync or async", default="async", type=str)
+
+    global TARGET_DEVICE, is_async_mode
+    args = parser.parse_args()
+    if args.device:
+        TARGET_DEVICE = args.device
+    if args.flag == "sync":
+        is_async_mode = False
+    else:
+        is_async_mode = True
     return parser
+
+
+def check_args():
+    # ArgumentParser checks the device
+
+    global TARGET_DEVICE
+    if 'MULTI' not in TARGET_DEVICE and TARGET_DEVICE not in accepted_devices:
+        print("Unsupported device: " + TARGET_DEVICE)
+        sys.exit(2)
+    elif 'MULTI' in TARGET_DEVICE:
+        target_devices = TARGET_DEVICE.split(':')[1].split(',')
+        for multi_device in target_devices:
+            if multi_device not in accepted_devices:
+                print("Unsupported device: " + TARGET_DEVICE)
+                sys.exit(2)
 
 
 def ssd_out(res, args, initial_wh, selected_region):
@@ -136,7 +165,6 @@ def ssd_out(res, args, initial_wh, selected_region):
             if area_of_person > area_of_intersection:
                 # assembly line area flags
                 INFO = INFO._replace(safe=True)
-
             else:
                 # assembly line area flags
                 INFO = INFO._replace(safe=False)
@@ -165,6 +193,8 @@ def main():
     global CLIENT
     global SIG_CAUGHT
     global KEEP_RUNNING
+    global TARGET_DEVICE
+    global is_async_mode
     CLIENT = mqtt.Client()
     CLIENT.connect(MQTT_HOST, MQTT_PORT, MQTT_KEEPALIVE_INTERVAL)
     CLIENT.subscribe(TOPIC)
@@ -177,18 +207,25 @@ def main():
     roi_y = args.pointy
     roi_w = args.width
     roi_h = args.height
+    check_args()
 
-    if args.input == 'cam':
-        input_stream = 0
-    else:
-        input_stream = args.input
-        assert os.path.isfile(args.input), "Specified input file doesn't exist"
+    assert os.path.isfile(CONFIG_FILE), "{} file doesn't exist".format(CONFIG_FILE)
+    config = json.loads(open(CONFIG_FILE).read())
+
+    for idx, item in enumerate(config['inputs']):
+        if item['video'].isdigit():
+            input_stream = int(item['video'])
+        else:
+            input_stream = item['video']
 
     cap = cv2.VideoCapture(input_stream)
-
     if not cap.isOpened():
         logger.error("ERROR! Unable to open video source")
         sys.exit(1)
+
+    # Init inference request IDs
+    cur_request_id = 0
+    next_request_id = 1
 
     if input_stream:
         # Adjust DELAY to match the number of FPS of the video file
@@ -196,11 +233,16 @@ def main():
     # Initialise the class
     infer_network = Network()
     # Load the network to IE plugin to get shape of input layer
-    n, c, h, w = infer_network.load_model(args.model, args.device, 1, 1, 0, args.cpu_extension)[1]
+    n, c, h, w = infer_network.load_model(args.model, TARGET_DEVICE, 1, 1, 2, args.cpu_extension)[1]
 
     message_thread = Thread(target=message_runner, args=())
     message_thread.setDaemon(True)
     message_thread.start()
+
+    if is_async_mode:
+        print("Application running in async mode...")
+    else:
+        print("Application running in sync mode...")
 
     ret, frame = cap.read()
     while ret:
@@ -252,7 +294,12 @@ def main():
 
         # Start asynchronous inference for specified request.
         inf_start = time.time()
-        infer_network.exec_net(0, in_frame_fd)
+        if is_async_mode:
+            # Async enabled and only one video capture
+            infer_network.exec_net(next_request_id, in_frame_fd)
+        else:
+            # Async disabled
+            infer_network.exec_net(cur_request_id, in_frame_fd)
         # Wait for the result
         infer_network.wait(0)
         det_time = time.time() - inf_start
@@ -262,17 +309,21 @@ def main():
         ssd_out(res, args, initial_wh, selected_region)
 
         # Draw performance stats
-        inf_time_message = "Inference time: {:.3f} ms".format(det_time * 1000)
+        inf_time_message = "Inference time: N\A for async mode" if is_async_mode else \
+            "Inference time: {:.3f} ms".format(det_time * 1000)
         render_time_message = "OpenCV rendering time: {:.3f} ms". \
             format(render_time * 1000)
 
         if not INFO.safe:
             warning = "HUMAN IN ASSEMBLY AREA: PAUSE THE MACHINE!"
-            cv2.putText(frame, warning, (15, 80), cv2.FONT_HERSHEY_COMPLEX, 0.8, (0, 0, 255), 2)
+            cv2.putText(frame, warning, (15, 100), cv2.FONT_HERSHEY_COMPLEX, 0.8, (0, 0, 255), 2)
 
-        cv2.putText(frame, inf_time_message, (15, 15), cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255), 1)
-        cv2.putText(frame, render_time_message, (15, 35), cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255), 1)
-        cv2.putText(frame, "Worker Safe: {}".format(INFO.safe), (15, 55), cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255), 1)
+        log_message = "Async mode is on." if is_async_mode else \
+            "Async mode is off."
+        cv2.putText(frame, log_message, (15, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+        cv2.putText(frame, inf_time_message, (15, 35), cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255), 1)
+        cv2.putText(frame, render_time_message, (15, 55), cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255), 1)
+        cv2.putText(frame, "Worker Safe: {}".format(INFO.safe), (15, 75), cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255), 1)
 
         render_start = time.time()
         cv2.imshow("Restricted Zone Notifier", frame)
@@ -285,6 +336,15 @@ def main():
             print("Attempting to stop background threads")
             KEEP_RUNNING = False
             break
+            # Tab key pressed
+        if key_pressed == 9:
+            is_async_mode = not is_async_mode
+            print("Switched to {} mode".format("async" if is_async_mode else "sync"))
+
+        if is_async_mode:
+            # Swap infer request IDs
+            cur_request_id, next_request_id = next_request_id, cur_request_id
+
     infer_network.clean()
     message_thread.join()
     cap.release()

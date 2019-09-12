@@ -1,0 +1,10 @@
+{
+    
+    "inputs": [
+
+	    {
+            "video": "../resources/worker-zone-detection.mp4"
+        }
+    ]
+    
+}
