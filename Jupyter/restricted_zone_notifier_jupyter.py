@@ -218,10 +218,6 @@ def main():
         logger.error("ERROR! Unable to open video source")
         sys.exit(1)
 
-    if input_stream:
-        # Adjust DELAY to match the number of FPS of the video in the file
-        DELAY = 1000 / cap.get(cv2.CAP_PROP_FPS)
-
     # Init inference request IDs
     cur_request_id = 0
     next_request_id = 1
@@ -264,7 +260,7 @@ def main():
             roi_w = next_frame.shape[1]
         if roi_h <= 0:
             roi_h = next_frame.shape[0]
-        key_pressed = cv2.waitKey(int(DELAY))
+        key_pressed = cv2.waitKey(1)
 
         # 'c' key pressed
         if key_pressed == 99:
@@ -297,10 +293,10 @@ def main():
             # Async disabled
             infer_network.exec_net(cur_request_id, in_frame_fd)
         # Wait for the result
-        infer_network.wait(0)
+        infer_network.wait(cur_request_id)
         det_time = time.time() - inf_start
         # Results of the output layer of the network
-        res = infer_network.get_output(0)
+        res = infer_network.get_output(cur_request_id)
         # Parse SSD output
         ssd_out(res, initial_wh, selected_region)
 
@@ -350,4 +346,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 

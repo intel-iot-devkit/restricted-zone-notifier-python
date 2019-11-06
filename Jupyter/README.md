@@ -28,7 +28,7 @@ This application is designed to detect the humans present in a predefined select
  
       uname -a
   
-* Intel® Distribution of OpenVINO™ toolkit 2019 R2 Release
+* Intel® Distribution of OpenVINO™ toolkit 2019 R3 Release
 * Jupyter* Notebook v5.7.0
 
 ## How It works
@@ -62,22 +62,22 @@ You will need the OpenCL™ Runtime package if you plan to run inference on the 
 Mosquitto is an open source message broker that implements the MQTT protocol. The MQTT protocol provides a lightweight method of carrying out messaging using a publish/subscribe model.
 
 ### Which model to use
-This application uses the [person-detection-retail-0002](https://docs.openvinotoolkit.org/2019_R2/person-detection-retail-0002.html)
+This application uses the [person-detection-retail-0013](https://docs.openvinotoolkit.org/2019_R3/_models_intel_person_detection_retail_0013_description_person_detection_retail_0013.html)
  Intel® pre-trained model, that can be accessed using the **model downloader**. The **model downloader** downloads the __.xml__ and __.bin__ files that will be used by the application.
  
-To install the dependencies of the RI and to download the **person-detection-retail-0002** Intel® model, run the following command:
+To install the dependencies of the RI and to download the **person-detection-retail-0013** Intel® model, run the following command:
 
     cd <path_to_the_restricted-zone-notifier-python_directory>
     ./setup.sh 
 
 The model will be downloaded inside the following directory:
  
-    /opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/Retail/object_detection/pedestrian/rmnet_ssd/0013/dldt/
+    /opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/intel/person-detection-retail-0013/
 
 ### The Config File
 
 The _resources/config.json_ contains the path to the videos that will be used by the application.
-The _config.json_ file is of the form name/value pair, `video: <path/to/video>`   
+The _config.json_ file is of the form name/value pair, `video: <path/to/video>`
 
 Example of the _config.json_ file:
 
@@ -144,25 +144,41 @@ __Note__: This command needs to be executed only once in the terminal where the 
 
 ## Run the application on Jupyter*
 
-<!--
-**Note:**<br>
-Before running the application on the FPGA, program the AOCX (bitstream) file. Use the setup_env.sh script from [fpga_support_files.tgz](http://registrationcenter-download.intel.com/akdlm/irc_nas/12954/fpga_support_files.tgz) to set the environment variables.<br>
-For example:
-
-    source /home/<user>/Downloads/fpga_support_files/setup_env.sh
-
-The bitstreams for HDDL-F can be found under the `/opt/intel/openvino/bitstreams/a10_vision_design_bitstreams` folder.<br>To program the bitstream use the below command:<br>
-
-    aocl program acl0 /opt/intel/openvino/bitstreams/a10_vision_design_bitstreams/2019R1_PL1_FP11_RMNet.aocx
-
-For more information on programming the bitstreams, please refer to https://software.intel.com/en-us/articles/OpenVINO-Install-Linux-FPGA#inpage-nav-11<br>
-<br>
--->
 * Go to the _restricted-zone-notifier-python_ directory and open the Jupyter notebook by running the following command:
 
       cd <path_to_the_restricted-zone-notifier-python_directory>/Jupyter
 
       jupyter notebook
+
+    **Note:** Before running the application on the FPGA, set the environment variables and  program the AOCX (bitstream) file.<br>
+
+    Set the Board Environment Variable to the proper directory:
+
+    ```
+    export AOCL_BOARD_PACKAGE_ROOT=/opt/intel/openvino/bitstreams/a10_vision_design_sg<#>_bitstreams/BSP/a10_1150_sg<#>
+    ```
+    **NOTE**: If you do not know which version of the board you have, please refer to the product label on the fan cover side or by the product SKU: Mustang-F100-A10-R10 => SG1; Mustang-F100-A10E-R10 => SG2 <br>
+
+    Set the Board Environment Variable to the proper directory:
+    ```
+    export QUARTUS_ROOTDIR=/home/<user>/intelFPGA/18.1/qprogrammer
+    ```
+    Set the remaining environment variables:
+    ```
+    export PATH=$PATH:/opt/altera/aocl-pro-rte/aclrte-linux64/bin:/opt/altera/aocl-pro-rte/aclrte-linux64/host/linux64/bin:/home/<user>/intelFPGA/18.1/qprogrammer/bin
+    export INTELFPGAOCLSDKROOT=/opt/altera/aocl-pro-rte/aclrte-linux64
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$AOCL_BOARD_PACKAGE_ROOT/linux64/lib
+    export CL_CONTEXT_COMPILER_MODE_INTELFPGA=3
+    source /opt/altera/aocl-pro-rte/aclrte-linux64/init_opencl.sh
+    ```
+    **NOTE**: It is recommended to create your own script for your system to aid in setting up these environment variables. It will be run each time you need a new terminal or restart your system.
+
+    The bitstreams for HDDL-F can be found under the `/opt/intel/openvino/bitstreams/a10_vision_design_sg<#>_bitstreams/` directory.<br><br>To program the bitstream use the below command:<br>
+    ```
+    aocl program acl0 /opt/intel/openvino/bitstreams/a10_vision_design_sg<#>_bitstreams/2019R3_PV_PL1_FP11_RMNet.aocx
+    ```
+
+    For more information on programming the bitstreams, please refer the [link](https://software.intel.com/en-us/articles/OpenVINO-Install-Linux-FPGA#inpage-nav-11).
 
 **Follow the steps to run the code on Jupyter:**
 
@@ -178,7 +194,7 @@ For more information on programming the bitstreams, please refer to https://soft
        
        %env DEVICE = CPU
        %env CPU_EXTENSION = /opt/intel/openvino/inference_engine/lib/intel64/libcpu_extension_sse4.so 
-       %env MODEL=/opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/Retail/object_detection/pedestrian/rmnet_ssd/0013/dldt/FP32/person-detection-retail-0013.xml
+       %env MODEL=/opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/intel/person-detection-retail-0013/FP32/person-detection-retail-0013.xml
        
 5. User can set threshold for the detection (PROB_THRESHOLD),
    number of seconds between data updates to MQTT server (RATE), also "off-limits" area coordinates (POINTX, POINTY, WIDTH, HEIGHT)
@@ -216,7 +232,7 @@ For more information on programming the bitstreams, please refer to https://soft
      * With the floating point precision 16 (FP16), change the environment variables as given below:<br>
         
            %env DEVICE = GPU
-           %env MODEL=/opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/Retail/object_detection/pedestrian/rmnet_ssd/0013/dldt/FP16/person-detection-retail-0013.xml
+           %env MODEL=/opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/intel/person-detection-retail-0013/FP16/person-detection-retail-0013.xml
        **FP16**: FP16 is half-precision floating-point arithmetic uses 16 bits. 5 bits for the magnitude and 10 bits for the precision. For more information, [click here](https://en.wikipedia.org/wiki/Half-precision_floating-point_format)
 
      * **CPU_EXTENSION** environment variable is not required.
@@ -225,35 +241,34 @@ For more information on programming the bitstreams, please refer to https://soft
       * Change the **%env DEVICE = CPU** to **%env DEVICE = MYRIAD**
       * The Intel® Neural Compute Stick can only run FP16 models. Hence change the environment variable for the model as shown below. <br>
       
-            %env MODEL=/opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/Retail/object_detection/pedestrian/rmnet_ssd/0013/dldt/FP16/person-detection-retail-0013.xml
+            %env MODEL=/opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/intel/person-detection-retail-0013/FP16/person-detection-retail-0013.xml
       * **CPU_EXTENSION** environment variable is not required.
 
-3. To run the application on **Intel® Movidius™ VPU**: 
+3. To run the application on **Intel® Movidius™ VPU**:
       * Change the **%env DEVICE = CPU** to **%env DEVICE = HDDL**
       * The  Intel® Movidius™ VPU can only run FP16 models. Hence change the environment variable for the model as shown below. <br>
       
-            %env MODEL=/opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/Retail/object_detection/pedestrian/rmnet_ssd/0013/dldt/FP16/person-detection-retail-0013.xml
+            %env MODEL=/opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/intel/person-detection-retail-0013/FP16/person-detection-retail-0013.xml
       * **CPU_EXTENSION** environment variable is not required.
 
-4. **%env RATE** should always have float values (e.g. 0.02, 1.00, etc.,).
+4. To run the application on **Intel® Arria® 10 FPGA**:
+      * Change the **%env DEVICE = CPU** to **%env DEVICE = HETERO:FPGA,CPU**
+      * With the **floating point precision 16 (FP16)**, change the path of the model in the environment variable **MODEL** as given below:<br>
 
-5. To run the application on multiple devices: <br>
+            %env MODEL=/opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/intel/person-detection-retail-0013/FP16/person-detection-retail-0013.xml
+      * Export the **CPU_EXTENSION** environment variable as shown below:
+
+            %env CPU_EXTENSION = /opt/intel/openvino/inference_engine/lib/intel64/libcpu_extension_sse4.so
+
+5. **%env RATE** should always have float values (e.g. 0.02, 1.00, etc.,).
+
+6. To run the application on multiple devices: <br>
    For example:
       * Change the **%env DEVICE = CPU** to **%env DEVICE = MULTI:CPU,GPU,MYRIAD**
       * With the **floating point precision 16 (FP16)**, change the path of the model in the environment variable **MODEL** as given below: <br>
-            %env MODEL=/opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/Retail/object_detection/pedestrian/rmnet_ssd/0013/dldt/FP16/person-detection-retail-0013.xml
+            %env MODEL=/opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/intel/person-detection-retail-0013/FP16/person-detection-retail-0013.xml
       * **%env CPU_EXTENSION=/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libcpu_extension_avx2.so**<br>
 
-<!--
-6. To run the application on **FPGA**: 
-      * Change the **%env DEVICE = CPU** to **%env DEVICE = HETERO:FPGA,CPU**
-      * With the **floating point precision 16 (FP16)**, change the path of the model in the environment variable **MODEL** as given below:<br>
-      
-            %env MODEL=/opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/Retail/object_detection/pedestrian/rmnet_ssd/0013/dldt/FP16/person-detection-retail-0013.xml
-      * Export the **CPU_EXTENSION** environment variable as shown below:
-         
-            %env CPU_EXTENSION = /opt/intel/openvino/inference_engine/lib/intel64/libcpu_extension_sse4.so
--->
 
 ## Machine to Machine Messaging with MQTT
 
