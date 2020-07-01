@@ -1,9 +1,8 @@
-
 # Restricted Zone Notifier
 
 | Details            |              |
 |-----------------------|---------------|
-| Target OS:            |  Ubuntu\* 16.04 LTS   |
+| Target OS:            |  Ubuntu\* 18.04 LTS   |
 | Programming Language: |  Python* 3.5 |
 | Time to Complete:    |  30 min     |
 
@@ -20,7 +19,7 @@ This application is designed to detect the humans present in a predefined select
  
 ### Software
 
-* [Ubuntu\* 16.04 LTS](http://releases.ubuntu.com/16.04/)
+* [Ubuntu\* 18.04 LTS](http://releases.ubuntu.com/18.04/)
 
 * OpenCL™ Runtime package
 
@@ -28,7 +27,7 @@ This application is designed to detect the humans present in a predefined select
  
       uname -a
   
-* Intel® Distribution of OpenVINO™ toolkit 2019 R3 Release
+* Intel® Distribution of OpenVINO™ toolkit 2020 R3 Release
 * Jupyter* Notebook v5.7.0
 
 ## How It works
@@ -62,7 +61,7 @@ You will need the OpenCL™ Runtime package if you plan to run inference on the 
 Mosquitto is an open source message broker that implements the MQTT protocol. The MQTT protocol provides a lightweight method of carrying out messaging using a publish/subscribe model.
 
 ### Which model to use
-This application uses the [person-detection-retail-0013](https://docs.openvinotoolkit.org/2019_R3/_models_intel_person_detection_retail_0013_description_person_detection_retail_0013.html)
+This application uses the [person-detection-retail-0013](https://docs.openvinotoolkit.org/2020.3/_models_intel_person_detection_retail_0013_description_person_detection_retail_0013.html)
  Intel® pre-trained model, that can be accessed using the **model downloader**. The **model downloader** downloads the __.xml__ and __.bin__ files that will be used by the application.
  
 To install the dependencies of the RI and to download the **person-detection-retail-0013** Intel® model, run the following command:
@@ -138,7 +137,7 @@ For example, if the output of above command is /dev/video0, then config.json wou
 ## Setup the environment
 You must configure the environment to use the Intel® Distribution of OpenVINO™ toolkit one time per session by running the following command:
 
-    source /opt/intel/openvino/bin/setupvars.sh -pyver 3.5
+    source /opt/intel/openvino/bin/setupvars.sh
 
 __Note__: This command needs to be executed only once in the terminal where the application will be executed. If the terminal is closed, the command needs to be executed again.
 
@@ -149,7 +148,7 @@ __Note__: This command needs to be executed only once in the terminal where the 
       cd <path_to_the_restricted-zone-notifier-python_directory>/Jupyter
 
       jupyter notebook
-
+<!--
     **Note:** Before running the application on the FPGA, set the environment variables and  program the AOCX (bitstream) file.<br>
 
     Set the Board Environment Variable to the proper directory:
@@ -179,7 +178,7 @@ __Note__: This command needs to be executed only once in the terminal where the 
     ```
 
     For more information on programming the bitstreams, please refer the [link](https://software.intel.com/en-us/articles/OpenVINO-Install-Linux-FPGA#inpage-nav-11).
-
+-->
 **Follow the steps to run the code on Jupyter:**
 
 ![Jupyter Notebook](../docs/images/jupyter.png)
@@ -193,7 +192,6 @@ __Note__: This command needs to be executed only once in the terminal where the 
 4. Export the below environment variables in second cell of Jupyter and press **Shift+Enter**.<br>
        
        %env DEVICE = CPU
-       %env CPU_EXTENSION = /opt/intel/openvino/inference_engine/lib/intel64/libcpu_extension_sse4.so 
        %env MODEL=/opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/intel/person-detection-retail-0013/FP32/person-detection-retail-0013.xml
        
 5. User can set threshold for the detection (PROB_THRESHOLD),
@@ -235,30 +233,26 @@ __Note__: This command needs to be executed only once in the terminal where the 
            %env MODEL=/opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/intel/person-detection-retail-0013/FP16/person-detection-retail-0013.xml
        **FP16**: FP16 is half-precision floating-point arithmetic uses 16 bits. 5 bits for the magnitude and 10 bits for the precision. For more information, [click here](https://en.wikipedia.org/wiki/Half-precision_floating-point_format)
 
-     * **CPU_EXTENSION** environment variable is not required.
 
 2. To run the application on **Intel® Neural Compute Stick**: 
       * Change the **%env DEVICE = CPU** to **%env DEVICE = MYRIAD**
       * The Intel® Neural Compute Stick can only run FP16 models. Hence change the environment variable for the model as shown below. <br>
       
             %env MODEL=/opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/intel/person-detection-retail-0013/FP16/person-detection-retail-0013.xml
-      * **CPU_EXTENSION** environment variable is not required.
 
 3. To run the application on **Intel® Movidius™ VPU**:
       * Change the **%env DEVICE = CPU** to **%env DEVICE = HDDL**
       * The  Intel® Movidius™ VPU can only run FP16 models. Hence change the environment variable for the model as shown below. <br>
       
             %env MODEL=/opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/intel/person-detection-retail-0013/FP16/person-detection-retail-0013.xml
-      * **CPU_EXTENSION** environment variable is not required.
 
+<!--
 4. To run the application on **Intel® Arria® 10 FPGA**:
       * Change the **%env DEVICE = CPU** to **%env DEVICE = HETERO:FPGA,CPU**
       * With the **floating point precision 16 (FP16)**, change the path of the model in the environment variable **MODEL** as given below:<br>
 
             %env MODEL=/opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/intel/person-detection-retail-0013/FP16/person-detection-retail-0013.xml
-      * Export the **CPU_EXTENSION** environment variable as shown below:
-
-            %env CPU_EXTENSION = /opt/intel/openvino/inference_engine/lib/intel64/libcpu_extension_sse4.so
+-->
 
 5. **%env RATE** should always have float values (e.g. 0.02, 1.00, etc.,).
 
@@ -267,7 +261,6 @@ __Note__: This command needs to be executed only once in the terminal where the 
       * Change the **%env DEVICE = CPU** to **%env DEVICE = MULTI:CPU,GPU,MYRIAD**
       * With the **floating point precision 16 (FP16)**, change the path of the model in the environment variable **MODEL** as given below: <br>
             %env MODEL=/opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader/intel/person-detection-retail-0013/FP16/person-detection-retail-0013.xml
-      * **%env CPU_EXTENSION=/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libcpu_extension_avx2.so**<br>
 
 
 ## Machine to Machine Messaging with MQTT
